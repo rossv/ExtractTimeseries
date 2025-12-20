@@ -1,10 +1,13 @@
 import streamlit as st
 import os
-import glob
 import pandas as pd
 from core import list_ids, list_params, extract_data, convert_units
+from utils import init_session_state, get_out_files, format_file_size, sanitize_filename  # <--- NEW IMPORT
 
 st.set_page_config(page_title="SWMM Timeseries Extractor", layout="wide", page_icon="🌊")
+
+# Initialize State
+init_session_state()
 
 # --- UI Helper: File Selector ---
 def file_selector(folder_path="."):
