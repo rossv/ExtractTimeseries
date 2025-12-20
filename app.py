@@ -10,10 +10,21 @@ st.set_page_config(page_title="SWMM Timeseries Extractor", layout="wide", page_i
 init_session_state()
 
 # --- UI Helper: File Selector ---
-def file_selector(folder_path="."):
-    filenames = glob.glob(os.path.join(folder_path, "*.out"))
-    selected_filename = st.selectbox("Select .out file", filenames)
-    return selected_filename
+def file_selector(folder_path):
+    filenames = get_out_files(folder_path)
+    if not filenames:
+        st.warning("No .out files found in this directory.")
+        return None
+    
+    # Create a display map so user sees "File.out (2.5 GB)"
+    display_map = {f: f"{os.path.basename(f)} ({format_file_size(f)})" for f in filenames}
+    
+    selected_file = st.selectbox(
+        "Select .out file", 
+        filenames, 
+        format_func=lambda x: display_map[x]
+    )
+    return selected_file
 
 # --- Sidebar: Configuration ---
 with st.sidebar:
