@@ -38,7 +38,7 @@ with st.sidebar:
         outfile = None
 
     st.header("4. Output Settings")
-    output_format = st.selectbox("Format", ["csv", "dat", "tsf"])
+    output_format = st.selectbox("Format", ["csv", "dat", "tsv"])
     output_dir = st.text_input("Output Directory", value=os.path.join(working_dir, "extracted"))
 
 # --- Main Page ---
@@ -154,7 +154,7 @@ if outfile:
                         
                         if output_format == "csv":
                             combined_df.to_csv(out_path)
-                        elif output_format == "dat":
+                        elif output_format in ["dat", "tsv"]:
                             combined_df.to_csv(out_path, sep="\t")
                         
                 st.success(f"Done! Files saved to: {output_dir}")
