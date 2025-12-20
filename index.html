@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SWMM Timeseries Extractor (Browser)</title>
+  <link rel="stylesheet" href="./assets/style.css" />
+  <script defer src="https://cdn.jsdelivr.net/pyodide/v0.26.3/full/pyodide.js"></script>
+  <script defer src="./assets/app.js"></script>
+</head>
+<body>
+  <header class="hero">
+    <div>
+      <p class="eyebrow">Github Pages ready</p>
+      <h1>SWMM Timeseries Extractor</h1>
+      <p class="lede">Run the extractor entirely in your browser using Pyodide. Drop a SWMM <code>.out</code> file, choose items and parameters, then download CSVs.</p>
+    </div>
+    <div class="badge">🌊 Browser-native</div>
+  </header>
+
+  <main class="container">
+    <section class="card" id="setup-card">
+      <h2>1) Load your <code>.out</code> file</h2>
+      <p>Files never leave your machine. We copy the file into an in-memory filesystem that only lives for this tab.</p>
+      <label class="file-input">
+        <input type="file" id="outFile" accept=".out" />
+        <span>Select SWMM .out file</span>
+      </label>
+      <div class="status" id="fileStatus">No file selected.</div>
+    </section>
+
+    <section class="card" id="config-card">
+      <h2>2) Configure extraction</h2>
+      <div class="grid">
+        <label>
+          Element type
+          <select id="elementType">
+            <option value="node">Node</option>
+            <option value="link">Link</option>
+            <option value="subcatchment">Subcatchment</option>
+            <option value="system">System</option>
+            <option value="pollutant">Pollutant</option>
+          </select>
+        </label>
+        <label>
+          Flow unit
+          <select id="flowUnit">
+            <option value="cfs">cfs</option>
+            <option value="cms">cms</option>
+            <option value="mgd">mgd</option>
+            <option value="l/s">l/s</option>
+            <option value="gpm">gpm</option>
+          </select>
+        </label>
+        <label>
+          Length / head unit
+          <select id="lengthUnit">
+            <option value="ft">ft</option>
+            <option value="m">m</option>
+          </select>
+        </label>
+        <label>
+          Velocity unit
+          <select id="velocityUnit">
+            <option value="ft/s">ft/s</option>
+            <option value="m/s">m/s</option>
+          </select>
+        </label>
+        <label>
+          Output format
+          <select id="outputFormat">
+            <option value="csv">CSV (comma)</option>
+            <option value="tsv">TSV (tab)</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="lists">
+        <div>
+          <div class="list-header">
+            <h3>Available IDs</h3>
+            <input type="search" id="idFilter" placeholder="Search IDs" />
+          </div>
+          <div class="list" id="idsList">Load a file to see IDs.</div>
+        </div>
+        <div>
+          <div class="list-header">
+            <h3>Parameters</h3>
+            <input type="search" id="paramFilter" placeholder="Search parameters" />
+          </div>
+          <div class="list" id="paramsList">Load a file to see parameters.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" id="run-card">
+      <div class="run-header">
+        <h2>3) Run extraction</h2>
+        <button id="extractBtn" disabled>Start extraction</button>
+      </div>
+      <p id="runSummary">Waiting for file...</p>
+      <div class="progress">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <div class="status" id="statusArea">Pyodide will load automatically when you pick a file.</div>
+      <div id="downloadArea" class="download-grid"></div>
+    </section>
+  </main>
+
+  <footer class="footer">Built with Pyodide. Nothing is uploaded to a server.</footer>
+</body>
+</html>
