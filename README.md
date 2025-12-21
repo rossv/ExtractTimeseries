@@ -11,7 +11,6 @@ python -m http.server 8000
 ```
 
 ### Deploy to GitHub Pages
-1. Commit the static assets (`index.html`, `assets/`, `web_support.py`, `core.py`).
-2. Push to a branch configured for Pages (e.g., `gh-pages`).
-3. In repository settings, set Pages source to that branch (root directory).
-4. Visit the published URL to use the extractor directly in the browser.
+1. Commit and push to the `main` branch; this triggers the GitHub Actions Pages publish workflow, which outputs the static site to the `gh-pages` branch.
+2. In repository settings (Pages), set the source to the `gh-pages` branch and the root (`/`) directory.
+3. Monitor workflow runs in the **Actions** tab (look for the Pages publish workflow) to confirm deployments succeed before checking the live site.
