@@ -3,6 +3,7 @@ import os
 import pandas as pd
 from core import list_ids, list_params, extract_data, convert_units
 from utils import init_session_state, get_out_files, format_file_size, sanitize_filename  # <--- NEW IMPORT
+from cache_utils import ids_need_refresh
 
 st.set_page_config(page_title="SWMM Timeseries Extractor", layout="wide", page_icon="🌊")
 
@@ -59,10 +60,11 @@ if outfile:
         
         with col2:
             # Dynamic ID Discovery
-            if 'ids' not in st.session_state or st.session_state.get('last_file') != outfile:
+            if ids_need_refresh(st.session_state, outfile, element_type):
                 with st.spinner("Scanning file for IDs..."):
                     st.session_state['ids'] = list_ids(outfile, element_type)
                     st.session_state['last_file'] = outfile
+                    st.session_state['last_item_type'] = element_type
             
             all_ids = st.session_state['ids']
             
