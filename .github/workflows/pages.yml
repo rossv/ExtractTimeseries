@@ -28,11 +28,9 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: |
-            index.html
-            assets
-            core.py
-            web_support.py
+          # Upload the entire repository root so the Pages deployment
+          # picks up the static entrypoint and assets.
+          path: .
 
       - name: Deploy to GitHub Pages
         id: deployment
