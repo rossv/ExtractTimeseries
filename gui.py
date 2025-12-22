@@ -16,6 +16,14 @@ from typing import Dict, List, Optional, Tuple
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+try:
+    from help_ui import HelpDialog
+except ImportError:
+    # Fallback/Mock for standalone runs if help_ui is missing
+    HelpDialog = None
+
+VERSION = "4.0 (Ported)"
+
 # --- MOCKED HELPERS from hh_tools ---
 def apply_dark_palette(app):
     """
@@ -91,7 +99,8 @@ def apply_dark_palette(app):
         border-bottom-color: {border_color.name()};
         border-top-left-radius: 4px;
         border-top-right-radius: 4px;
-        padding: 6px 14px;
+        padding: 8px 30px;
+        min-width: 120px;
         margin-right: 2px;
         color: #888;
     }}
@@ -222,7 +231,11 @@ def apply_dark_palette(app):
 
 
 def show_help(topic, parent):
-    QtWidgets.QMessageBox.information(parent, "Help", f"Help topic: {topic}\n\n(Documentation not bundled)")
+    if HelpDialog:
+        dlg = HelpDialog(parent, version=VERSION)
+        dlg.exec_()
+    else:
+        QtWidgets.QMessageBox.information(parent, "Help", f"Help topic: {topic}\n\n(help_ui.py not found)")
 
 def completion_art():
     return "\n" + r"""
@@ -265,7 +278,18 @@ APP_ORG = "HH-Tools"
 APP_NAME = "Timeseries Extractor"
 
 # Use local icons or placeholder
-ICON_DIR = Path(__file__).parent 
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+
+    return os.path.join(base_path, relative_path)
+
+# Use local icons or placeholder
+ICON_PATH = Path(resource_path(os.path.join("assets", "extract_timeseries.ico"))) 
 
 TYPES = ["node", "link", "subcatchment", "system", "pollutant"]
 
@@ -329,7 +353,9 @@ class FileList(QtWidgets.QListWidget):
         added = False
         for p in paths:
             if p not in existing:
-                self.addItem(p)
+                it = QtWidgets.QListWidgetItem(p)
+                it.setToolTip(p)
+                self.addItem(it)
                 added = True
         if added:
             # Notify only when new files were actually appended so downstream
@@ -419,6 +445,7 @@ class SearchableList(QtWidgets.QWidget):
         self.list.clear()
         for s in items:
             it = QtWidgets.QListWidgetItem(s)
+            it.setToolTip(s)
             if self.checkable:
                 it.setCheckState(QtCore.Qt.Unchecked)
             self.list.addItem(it)
@@ -776,6 +803,7 @@ class ExtractorWindow(QtWidgets.QMainWindow):
         self.file_list.filesChanged.connect(lambda: self._start_discover_ids(auto=True))
         self.file_list.filesChanged.connect(self._detect_units)
         self.tabs.addTab(self.page_sources, "1) Sources")
+        self.tabs.setTabToolTip(0, "Manage input .out files")
 
         # Section 2: IDs
         self.page_ids = QtWidgets.QWidget()
@@ -817,7 +845,21 @@ class ExtractorWindow(QtWidgets.QMainWindow):
         grid.addWidget(self.id_count_label, 3, 1, 1, 3)
         grid.setRowStretch(2, 1)
         grid.setColumnStretch(3, 1)
+
         self.tabs.addTab(self.page_ids, "2) IDs")
+        self.tabs.setTabToolTip(1, "Select specific elements (Nodes, Links, etc.)")
+
+        # Set tooltips for ID sub-tabs
+        id_tooltips = {
+            "node": "Junctions, Outfalls, Dividers, Storage Units",
+            "link": "Conduits, Pumps, Orifices, Weirs, Outlets",
+            "subcatchment": "Subcatchment areas",
+            "system": "System-wide variables (Rainfall, Runoff, etc.)",
+            "pollutant": "Pollutant concentrations and loads"
+        }
+        for i, t in enumerate(TYPES):
+            if t in id_tooltips:
+                self.id_tabs.setTabToolTip(i, id_tooltips[t])
 
         # Section 3: Parameters
         self.page_params = QtWidgets.QWidget()
@@ -829,7 +871,14 @@ class ExtractorWindow(QtWidgets.QMainWindow):
             self.param_tabs.addTab(w, t.title())
             self.param_lists[t] = w
         gridp.addWidget(self.param_tabs, 0, 0, 1, 3)
+
         self.tabs.addTab(self.page_params, "3) Parameters")
+        self.tabs.setTabToolTip(2, "Select variables to extract (Flow, Depth, etc.)")
+
+        # Reuse same tooltips for parameter sub-tabs as they correspond to the same types
+        for i, t in enumerate(TYPES):
+            if t in id_tooltips:
+                self.param_tabs.setTabToolTip(i, id_tooltips[t])
 
         # Section 4: Units
         self.page_units = QtWidgets.QWidget()
@@ -876,7 +925,9 @@ class ExtractorWindow(QtWidgets.QMainWindow):
         fu.addRow("To depth", self.to_depth)
         fu.addRow("To head", self.to_head)
         fu.addRow("To velocity", self.to_vel)
+
         self.tabs.addTab(self.page_units, "4) Units")
+        self.tabs.setTabToolTip(3, "Configure unit conversions")
 
         # Section 5: Output
         self.page_output = QtWidgets.QWidget()
@@ -939,7 +990,9 @@ class ExtractorWindow(QtWidgets.QMainWindow):
         r += 1
         fo.addWidget(QtWidgets.QLabel("Planned filenames (preview)"), r, 0)
         fo.addWidget(self.preview_box, r, 1, 1, 3)
+
         self.tabs.addTab(self.page_output, "5) Output")
+        self.tabs.setTabToolTip(4, "Set output format and file naming")
 
         # Wire actions
         self.btn_discover.clicked.connect(lambda: self._start_discover_ids(auto=False))
@@ -1329,6 +1382,7 @@ class ExtractorWindow(QtWidgets.QMainWindow):
                 continue
             # add item and select it
             it = QtWidgets.QListWidgetItem(i)
+            it.setToolTip(i)
             it.setCheckState(QtCore.Qt.Checked)
             w.list.addItem(it)
             pasted.append((t, i))

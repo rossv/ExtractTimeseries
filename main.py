@@ -1,11 +1,11 @@
 
 import sys
 from PyQt5 import QtWidgets, QtGui
-from gui import ExtractorWindow, apply_dark_palette, ICON_DIR
+from gui import ExtractorWindow, apply_dark_palette, ICON_PATH
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
-    # app.setWindowIcon(QtGui.QIcon(str(ICON_DIR / "extract_timeseries.ico")))
+    app.setWindowIcon(QtGui.QIcon(str(ICON_PATH)))
     apply_dark_palette(app)
     win = ExtractorWindow()
     win.show()
