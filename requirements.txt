@@ -1,0 +1,5 @@
+pandas
+swmmtoolbox
+tqdm
+PyQt5
+pyinstaller
