@@ -11,6 +11,7 @@ SWMM Unified Extractor — v4 (Callbacks + Planning)
 from __future__ import annotations
 
 import argparse
+import csv
 import glob
 import hashlib
 import json
@@ -392,14 +393,53 @@ def read_ids_and_label_from_header(file_path: str) -> Tuple[List[str], str]:
     label = ""
     with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
         for i, line in enumerate(f):
-            if i == 0 and line.startswith("IDs:"):
-                ids = [s.strip() for s in re.split(r"[\t,]", line)[1:]]
+            if i == 0 and line.startswith("IDs"):
+                parts = [s.strip() for s in re.split(r"[\t,]", line)]
+                ids = [s for s in parts[1:] if s]
             elif i == 1 and line.startswith("Date/Time"):
                 parts = [p.strip() for p in re.split(r"[\t,]", line)]
                 if len(parts) > 1:
                     label = parts[1]
                 break
     return ids, label
+
+
+def read_header_metadata(
+    file_path: str,
+) -> Tuple[List[str], str, List[str], Optional[str]]:
+    """Return IDs, first label, all column headers, and detected delimiter."""
+
+    ids, label = read_ids_and_label_from_header(file_path)
+    columns: List[str] = []
+    delimiter: Optional[str] = None
+
+    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+        for line in f:
+            stripped = line.rstrip("\n")
+            if delimiter is None and stripped.startswith("IDs"):
+                if "\t" in stripped:
+                    delimiter = "\t"
+                elif "," in stripped:
+                    delimiter = ","
+
+            if stripped.startswith("Date/Time"):
+                if delimiter is None:
+                    if "\t" in stripped:
+                        delimiter = "\t"
+                    elif "," in stripped:
+                        delimiter = ","
+
+                parts = [p.strip() for p in re.split(r"[\t,]", stripped)]
+                if len(parts) > 1:
+                    columns = parts[1:]
+                    if not label and columns:
+                        label = columns[0]
+                break
+
+    if not columns and label:
+        columns = [label]
+
+    return ids, label, columns, delimiter
 
 # ----------------------------
 # Core extraction + callbacks
@@ -743,10 +783,12 @@ def combine_across_files(
 
     # Buckets keyed by (type, id, label)
     buckets: Dict[Tuple[str, str, str], List[str]] = defaultdict(list)
+    metadata_cache: Dict[str, Tuple[List[str], str, List[str], Optional[str]]] = {}
 
     for item_type, p in new_files:
         try:
-            ids, label = read_ids_and_label_from_header(p)
+            ids, label, columns, delimiter = read_header_metadata(p)
+            metadata_cache[p] = (ids, label, columns, delimiter)
             for i in ids:
                 buckets[(item_type, i, label)].append(p)
         except Exception as e:
@@ -756,14 +798,61 @@ def combine_across_files(
         frames = []
         for fp in paths:
             try:
-                # guess skip lines: TSF=2, DAT=1
+                ids, header_label, columns, delimiter = metadata_cache.get(
+                    fp, ([], label, [], None)
+                )
+
+                # guess skip lines: TSF=2, DAT/CSV=1
                 skip = 2 if out_format == "tsf" else 1
+
                 rows = parse_data_lines(fp, skip=skip)
                 if not rows:
                     continue
-                idx = [ts for ts, _ in rows]
-                vals = [float((re.split(r"[\t,]", rest)[0] if rest else "nan")) for _, rest in rows]
-                frames.append(pd.DataFrame({"value": vals}, index=idx))
+
+                def split_values(rest: str) -> List[str]:
+                    cleaned = rest.strip()
+                    if not cleaned:
+                        return []
+                    if delimiter in ("\t", ","):
+                        return next(csv.reader([cleaned], delimiter=delimiter))
+                    return [p for p in re.split(r"[\t, ]+", cleaned) if p]
+
+                value_rows: List[Tuple[datetime, List[str]]] = []
+                max_len = len(columns)
+                for ts, rest in rows:
+                    values = split_values(rest)
+                    max_len = max(max_len, len(values))
+                    value_rows.append((ts, values))
+
+                if max_len == 0:
+                    continue
+
+                base_name = header_label or label or "value"
+                col_names: List[str] = list(columns)
+                if not col_names:
+                    col_names = [
+                        base_name if max_len == 1 else f"{base_name}_{i}"
+                        for i in range(1, max_len + 1)
+                    ]
+                else:
+                    while len(col_names) < max_len:
+                        col_names.append(f"{base_name}_{len(col_names) + 1}")
+
+                idx: List[datetime] = []
+                parsed_rows: List[List[float]] = []
+                for ts, values in value_rows:
+                    padded = values + [""] * (max_len - len(values))
+
+                    def to_float(v: str) -> float:
+                        try:
+                            return float(v)
+                        except Exception:
+                            return float("nan")
+
+                    parsed_rows.append([to_float(v) for v in padded])
+                    idx.append(ts)
+
+                frames.append(pd.DataFrame(parsed_rows, index=idx, columns=col_names))
             except Exception as e:
                 logging.warning(f"Combine read fail {fp}: {e}")
         if not frames:
@@ -804,28 +893,31 @@ def combine_across_files(
         )
         out_path = os.path.join(out_dir, fname)
 
+        tab_columns = "\t".join(left.columns)
+        csv_columns = ",".join(left.columns)
+
         if out_format == "tsf":
             file_export_tsf(
-                left.rename(columns={"value": label}),
+                left,
                 out_path,
                 f"IDs:\t{elem_id}",
-                f"Date/Time\t{label}",
+                f"Date/Time\t{tab_columns}",
                 "%m/%d/%Y %H:%M",
                 "%.6f",
             )
         elif out_format == "csv":
             file_export_csv(
-                left.rename(columns={"value": label}),
+                left,
                 out_path,
-                f"IDs:,{elem_id}\nDate/Time,{label}",
+                f"IDs,{elem_id}\nDate/Time,{csv_columns}",
                 "%m/%d/%Y %H:%M",
                 "%.6f",
             )
         else:
             file_export_dat(
-                left.rename(columns={"value": label}),
+                left,
                 out_path,
-                f"IDs:\t{elem_id}\nDate/Time\t{label}",
+                f"IDs:\t{elem_id}\nDate/Time\t{tab_columns}",
                 "%m/%d/%Y %H:%M",
                 "%.6f",
             )
