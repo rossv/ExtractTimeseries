@@ -97,3 +97,44 @@ def test_combine_across_files_preserves_columns(tmp_path):
     assert lines[3] == "01/01/2024 01:00,2.000000,20.000000,nan"
     assert lines[4] == "01/01/2024 02:00,3.000000,30.000000,300.000000"
     assert lines[5] == "01/01/2024 03:00,4.000000,40.000000,400.000000"
+
+
+def test_exports_coerce_index_and_format(tmp_path, monkeypatch):
+    df = pd.DataFrame(
+        {
+            "Date/Time": pd.to_datetime(
+                ["2024-01-01T00:00:00", "2024-01-01T01:00:00"],
+            ),
+            "flow": [1.2345, 6.789],
+        },
+        index=[10, 11],
+    )
+
+    monkeypatch.chdir(tmp_path)
+
+    time_format = "%m/%d/%Y %H:%M"
+    float_format = "%.2f"
+
+    logic.file_export_dat(
+        df,
+        "coerced.dat",
+        header="IDs:\tflow",
+        time_format=time_format,
+        float_format=float_format,
+    )
+    logic.file_export_csv(
+        df,
+        "coerced.csv",
+        header="IDs,flow",
+        time_format=time_format,
+        float_format=float_format,
+    )
+
+    dat_lines = (tmp_path / "coerced.dat").read_text().splitlines()
+    csv_lines = (tmp_path / "coerced.csv").read_text().splitlines()
+
+    assert dat_lines[:2] == ["IDs:\tflow", "Date/Time\tflow"]
+    assert csv_lines[:2] == ["IDs,flow", "Date/Time,flow"]
+
+    assert dat_lines[2:] == ["01/01/2024 00:00\t1.23", "01/01/2024 01:00\t6.79"]
+    assert csv_lines[2:] == ["01/01/2024 00:00,1.23", "01/01/2024 01:00,6.79"]
