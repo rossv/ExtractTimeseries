@@ -324,7 +324,9 @@ def discover_ids(outfile: str, item_type: str) -> List[str]:
 
 def _write_with_headers(df, filename: str, header_lines: List[str], time_format: str, float_format: str, sep: str = "\t") -> None:
     import pandas as pd
-    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    dirpath = os.path.dirname(filename) or "."
+    if dirpath not in {"", "."}:
+        os.makedirs(dirpath, exist_ok=True)
     with open(filename, "w", encoding="utf-8", newline="") as f:
         for h in header_lines:
             f.write(h.rstrip("\n") + "\n")
