@@ -4,9 +4,9 @@ PyQt5 desktop tool for extracting time series data from SWMM `.out` files with t
 
 ## Repository layout
 - `main.py` starts the PyQt5 application with the dark theme and window icon.
-- `gui.py` defines the `ExtractorWindow` interface, menus, theme helper, and ties UI actions to the extraction logic.
-- `logic.py` contains the data parsing, filtering, and export helpers used by the GUI and tests.
-- `help_ui.py` provides the in-app help/about dialog content.
+- `extracttimeseries/gui.py` defines the `ExtractorWindow` interface, menus, theme helper, and ties UI actions to the extraction logic.
+- `extracttimeseries/logic.py` contains the data parsing, filtering, and export helpers used by the GUI and tests.
+- `extracttimeseries/help_ui.py` provides the in-app help/about dialog content.
 - `assets/extract_timeseries.ico` supplies the application icon used by both the runtime and the PyInstaller build (`SWMM_Extractor.spec`).
 - `tests/` exercises the export helpers.
 
