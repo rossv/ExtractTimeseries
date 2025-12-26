@@ -16,6 +16,12 @@ pip install -r requirements.txt
 python main.py
 ```
 
+## Run tests
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
 ## Deployable GitHub Pages app
 This repository does not ship a browser-only build; the shipped interface is the PyQt5 desktop app. If you want a static download page on GitHub Pages, publish artifacts from the existing desktop bundle instead of pointing at non-existent `index.html` files.
 
