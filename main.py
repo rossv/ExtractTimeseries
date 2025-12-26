@@ -1,7 +1,7 @@
 
 import sys
 from PyQt5 import QtWidgets, QtGui
-from gui import ExtractorWindow, apply_dark_palette, ICON_PATH
+from extracttimeseries.gui import ExtractorWindow, apply_dark_palette, ICON_PATH
 
 def main():
     app = QtWidgets.QApplication(sys.argv)

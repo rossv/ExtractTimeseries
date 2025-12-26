@@ -1,10 +1,6 @@
-import sys
-from pathlib import Path
-
 import pandas as pd
 
-sys.path.append(str(Path(__file__).resolve().parents[1]))
-import logic
+from extracttimeseries import logic
 
 
 def test_export_helpers_accept_plain_filenames(tmp_path, monkeypatch):

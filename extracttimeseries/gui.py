@@ -15,12 +15,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-
-try:
-    from help_ui import HelpDialog
-except ImportError:
-    # Fallback/Mock for standalone runs if help_ui is missing
-    HelpDialog = None
+from .help_ui import HelpDialog
 
 VERSION = "4.0 (Ported)"
 
@@ -248,31 +243,16 @@ def completion_art():
     """ + "\n"
 
 # --- IMPORTS FROM LOGIC.PY ---
-try:
-    from logic import (
-        combine_across_files,
-        discover_ids,
-        FilenameTemplateError,
-        list_possible_params,
-        output_subdir_name,
-        plan_elements,
-        process_elements,
-        resolve_output_subdirs,
-    )
-except ImportError:
-    # fallback if run from same dir
-    import sys
-    sys.path.append(os.path.dirname(__file__))
-    from logic import (
-        combine_across_files,
-        discover_ids,
-        FilenameTemplateError,
-        list_possible_params,
-        output_subdir_name,
-        plan_elements,
-        process_elements,
-        resolve_output_subdirs,
-    )
+from .logic import (
+    combine_across_files,
+    discover_ids,
+    FilenameTemplateError,
+    list_possible_params,
+    output_subdir_name,
+    plan_elements,
+    process_elements,
+    resolve_output_subdirs,
+)
 
 APP_ORG = "HH-Tools"
 APP_NAME = "Timeseries Extractor"
@@ -284,7 +264,7 @@ def resource_path(relative_path):
         # PyInstaller creates a temp folder and stores path in _MEIPASS
         base_path = sys._MEIPASS
     except Exception:
-        base_path = os.path.dirname(os.path.abspath(__file__))
+        base_path = Path(__file__).resolve().parent.parent
 
     return os.path.join(base_path, relative_path)
 
